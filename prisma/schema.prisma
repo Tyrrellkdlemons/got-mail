@@ -10,9 +10,11 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
-  // directUrl = env("DIRECT_URL")  // uncomment when on Postgres/Neon
+  // Neon Postgres for prod (Netlify). If you want to dev locally with SQLite,
+  // temporarily switch provider back to "sqlite" and set DATABASE_URL=file:./prisma/dev.db
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------- Identity ----------
