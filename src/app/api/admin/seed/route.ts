@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { MIGRATION_SQL } from "@/lib/migration-sql";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -171,6 +172,41 @@ const ALL_SOURCES: Seed[] = [
 
 function sha256Hex(s: string) {
   return crypto.createHash("sha256").update(s).digest("hex");
+}
+
+async function runMigration() {
+  // Split the migration SQL into individual statements and run each.
+  // CREATE TABLE IF NOT EXISTS / CREATE INDEX IF NOT EXISTS handle re-runs.
+  // CREATE TYPE and ALTER TABLE ADD CONSTRAINT don't support IF NOT EXISTS,
+  // so we swallow "already exists" errors.
+  const statements = MIGRATION_SQL
+    .split(/;\s*(?:\n|$)/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && !s.startsWith("--"));
+
+  let skipped = 0;
+  let ran = 0;
+  const errors: string[] = [];
+
+  for (const stmt of statements) {
+    try {
+      await prisma.$executeRawUnsafe(stmt);
+      ran++;
+    } catch (e: any) {
+      const msg = String(e?.message ?? e).toLowerCase();
+      if (
+        msg.includes("already exists") ||
+        msg.includes("duplicate object") ||
+        msg.includes("42p07") || // duplicate_table
+        msg.includes("42710")    // duplicate_object
+      ) {
+        skipped++;
+      } else {
+        errors.push(`${stmt.slice(0, 80)}...: ${e?.message}`);
+      }
+    }
+  }
+  return { ran, skipped, errors };
 }
 
 async function runSeed() {
@@ -418,10 +454,12 @@ async function handle(req: NextRequest) {
   }
 
   try {
+    const migration = await runMigration();
     const counts = await runSeed();
     return NextResponse.json({
       ok: true,
-      message: "Seed complete. Reload the site — every page now has data.",
+      message: "Migration + seed complete. Reload the site — every page now has data.",
+      migration,
       counts,
     });
   } catch (e: any) {
