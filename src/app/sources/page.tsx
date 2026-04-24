@@ -19,10 +19,10 @@ export default async function SourcesPage() {
     orderBy: [{ category: "asc" }, { name: "asc" }],
   }).catch(() => []);
 
-  const grouped: Record<string, typeof items> = {};
+  type Item = (typeof items)[number];
+  const grouped: Record<string, Item[]> = {};
   for (const it of items) {
-    grouped[it.category] = grouped[it.category] ?? [];
-    grouped[it.category].push(it);
+    (grouped[it.category] ??= []).push(it);
   }
 
   return (
