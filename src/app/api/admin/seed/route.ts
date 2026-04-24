@@ -174,6 +174,22 @@ function sha256Hex(s: string) {
   return crypto.createHash("sha256").update(s).digest("hex");
 }
 
+/** Wake Neon up by running a trivial query with backoff. */
+async function waitForDb(maxAttempts = 6): Promise<{ ok: boolean; attempts: number; error?: string }> {
+  for (let i = 1; i <= maxAttempts; i++) {
+    try {
+      await prisma.$queryRawUnsafe("SELECT 1");
+      return { ok: true, attempts: i };
+    } catch (e: any) {
+      if (i === maxAttempts) return { ok: false, attempts: i, error: e?.message };
+      // Exponential-ish backoff: 1s, 2s, 4s, 8s, 15s, 30s
+      const waitMs = [1000, 2000, 4000, 8000, 15000, 30000][i - 1] ?? 5000;
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+  }
+  return { ok: false, attempts: maxAttempts };
+}
+
 async function runMigration() {
   // Split the migration SQL into individual statements and run each.
   // CREATE TABLE IF NOT EXISTS / CREATE INDEX IF NOT EXISTS handle re-runs.
@@ -454,11 +470,25 @@ async function handle(req: NextRequest) {
   }
 
   try {
+    const wake = await waitForDb();
+    if (!wake.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Neon database did not wake up in time (6 attempts, ~60s).",
+          hint:
+            "In Netlify env vars, append &connect_timeout=60 to DATABASE_URL, then retry. Also confirm the Neon compute is not suspended in the Neon console.",
+          details: wake.error,
+        },
+        { status: 503 }
+      );
+    }
     const migration = await runMigration();
     const counts = await runSeed();
     return NextResponse.json({
       ok: true,
       message: "Migration + seed complete. Reload the site — every page now has data.",
+      wake,
       migration,
       counts,
     });

@@ -54,21 +54,22 @@ const NAV: NavItem[] = [
 
   { href: "/contacts", label: "Contacts", icon: Users2, section: "Audience" },
   { href: "/segments", label: "Segments", icon: Tags, section: "Audience" },
-  { href: "/consent", label: "Consent Ledger", icon: History, section: "Audience", badge: "pro" },
+  { href: "/consent", label: "Consent Ledger", icon: History, section: "Audience", badge: "live" },
 
   { href: "/campaigns", label: "Campaign Builder", icon: PencilRuler, section: "Send" },
   { href: "/templates", label: "Templates", icon: Inbox, section: "Send" },
+  { href: "/test-send", label: "Test Send (5)", icon: Rocket, section: "Send", badge: "live" },
   { href: "/mass-mode", label: "1,000+ Mass Mode", icon: Rocket, section: "Send" },
   { href: "/queue", label: "Sending Queue", icon: Gauge, section: "Send" },
 
   { href: "/deliverability", label: "Deliverability", icon: Gauge, section: "Health" },
-  { href: "/dns-health", label: "DNS Health", icon: Network, section: "Health" },
+  { href: "/dns-health", label: "DNS Health", icon: Network, section: "Health", badge: "live" },
   { href: "/bounces", label: "Bounces & Complaints", icon: AlertTriangle, section: "Health" },
   { href: "/suppression", label: "Suppression", icon: ShieldCheck, section: "Health" },
   { href: "/unsubscribes", label: "Unsubscribes", icon: Inbox, section: "Health" },
   { href: "/compliance", label: "Compliance Checklist", icon: ListChecks, section: "Health" },
-  { href: "/doctor", label: "Deliverability Doctor", icon: FlaskConical, section: "Health", badge: "pro" },
-  { href: "/warmup", label: "Warmup Autopilot", icon: Sparkles, section: "Health", badge: "pro" },
+  { href: "/doctor", label: "Deliverability Doctor", icon: FlaskConical, section: "Health", badge: "live" },
+  { href: "/warmup", label: "Warmup Autopilot", icon: Sparkles, section: "Health" },
 
   { href: "/settings", label: "Settings", icon: Settings, section: "Admin" },
 ];
@@ -142,6 +143,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                                 "rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase",
                                 item.badge === "pro"
                                   ? "bg-magenta/20 text-magenta"
+                                  : item.badge === "live"
+                                  ? "bg-health-good/20 text-health-good"
                                   : "bg-paw/20 text-paw"
                               )}
                             >
