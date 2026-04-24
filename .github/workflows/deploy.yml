@@ -1,0 +1,50 @@
+name: CI + Netlify Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci --legacy-peer-deps
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Build Next.js
+        env:
+          DATABASE_URL: "file:./prisma/dev.db"
+          NEXTAUTH_SECRET: "ci-placeholder-secret-ci-placeholder-secret"
+          CREDENTIALS_ENCRYPTION_KEY: "ci-placeholder-32-byte-encryption-ke"
+        run: npm run build
+
+      # Netlify auto-deploys from the connected repo, but this step can
+      # push a preview/manual deploy using the CLI if needed.
+      #
+      # - name: Deploy to Netlify
+      #   if: github.ref == 'refs/heads/main'
+      #   uses: netlify/actions/cli@master
+      #   with:
+      #     args: deploy --dir=.next --prod
+      #   env:
+      #     NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      #     NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}

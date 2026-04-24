@@ -1,0 +1,591 @@
+// ================================
+//   Got Mail — Prisma schema
+// ================================
+// Defaults to SQLite for dev.
+// For Neon Postgres in prod, change `provider = "sqlite"` -> `provider = "postgresql"`
+// and set DATABASE_URL / DIRECT_URL in .env. See NEON_SETUP.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL")  // uncomment when on Postgres/Neon
+}
+
+// ---------- Identity ----------
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String?
+  passwordHash String?
+  role        Role     @default(MEMBER)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  memberships Membership[]
+  auditLogs   AuditLog[]
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model Workspace {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  legalName      String?
+  postalAddress  String?
+  replyTo        String?
+  timezone       String   @default("UTC")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  memberships        Membership[]
+  contacts           Contact[]
+  segments           Segment[]
+  campaigns          Campaign[]
+  templates          EmailTemplate[]
+  providerAccounts   ProviderAccount[]
+  sendingIdentities  SendingIdentity[]
+  smtpAccounts       SMTPAccount[]
+  domains            Domain[]
+  suppressions       Suppression[]
+  unsubscribes       Unsubscribe[]
+  bounces            Bounce[]
+  complaints         Complaint[]
+  sendJobs           SendJob[]
+  emailSends         EmailSend[]
+  emailEvents        EmailEvent[]
+  deliverabilityHealth DeliverabilityHealth[]
+  auditLogs          AuditLog[]
+  consentRecords     ConsentRecord[]
+  warmupSchedules    WarmupSchedule[]
+}
+
+model Membership {
+  id          String    @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        Role      @default(MEMBER)
+  createdAt   DateTime  @default(now())
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+}
+
+// ---------- Sending identity & infrastructure ----------
+
+model SendingIdentity {
+  id             String        @id @default(cuid())
+  workspaceId    String
+  mode           SendingMode
+  name           String
+  fromName       String
+  fromEmail      String
+  replyTo        String?
+  providerKind   String?       // "brevo" | "mailjet" | "resend" | "postmark" | "sendgrid" | "smtp" | "gmail" | "google-workspace" | "postal" | "listmonk" | "mautic"
+  domainId       String?
+  smtpAccountId  String?
+  providerAccountId String?
+  dailyLimit     Int?
+  hourlyLimit    Int?
+  warmupStatus   WarmupStatus  @default(NONE)
+  isDefault      Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  workspace      Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  domain         Domain?       @relation(fields: [domainId], references: [id])
+  smtpAccount    SMTPAccount?  @relation(fields: [smtpAccountId], references: [id])
+  providerAccount ProviderAccount? @relation(fields: [providerAccountId], references: [id])
+
+  campaigns      Campaign[]
+  sendJobs       SendJob[]
+  warmupSchedules WarmupSchedule[]
+}
+
+enum SendingMode {
+  MY_EMAIL         // user's personal mailbox via SMTP/API
+  OWNED_DOMAIN     // recommended
+  FREE_DOMAIN      // experimental / low-trust
+  OPEN_SOURCE      // listmonk / Mautic / Postal / self-hosted stack
+}
+
+enum WarmupStatus {
+  NONE
+  IN_PROGRESS
+  PAUSED
+  COMPLETED
+}
+
+model SMTPAccount {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  label           String
+  host            String
+  port            Int
+  username        String
+  passwordEnc     String      // AES-encrypted at rest
+  useTls          Boolean     @default(true)
+  fromEmail       String
+  fromName        String
+  dailyLimit      Int?
+  hourlyLimit     Int?
+  providerType    String?     // "gmail" | "google-workspace" | "outlook" | "zoho" | "custom"
+  verifiedAt      DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  workspace       Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sendingIdentities SendingIdentity[]
+}
+
+model ProviderAccount {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  providerKind  String   // "brevo" | "mailjet" | "resend" | "postmark" | "sendgrid" | "postal" | "listmonk" | "mautic" | "ses"
+  label         String
+  apiKeyEnc     String?
+  apiSecretEnc  String?
+  baseUrl       String?
+  webhookSecret String?
+  verifiedAt    DateTime?
+  dailyLimit    Int?
+  monthlyLimit  Int?
+  hourlyLimit   Int?
+  dailySent     Int      @default(0)
+  monthlySent   Int      @default(0)
+  lastSentAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sendingIdentities SendingIdentity[]
+  sendJobs      SendJob[]
+}
+
+model Domain {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  domain            String
+  status            DomainStatus @default(PENDING)
+  spfValid          Boolean  @default(false)
+  dkimValid         Boolean  @default(false)
+  dmarcValid        Boolean  @default(false)
+  returnPathValid   Boolean  @default(false)
+  trackingDomain    String?
+  reputationScore   Float?
+  freeSubdomain     Boolean  @default(false)     // flags EXPERIMENTAL / LOW-TRUST
+  freeSubdomainHost String?                       // e.g. "afraid.org"
+  lastCheckedAt     DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  verifications     DomainVerification[]
+  sendingIdentities SendingIdentity[]
+
+  @@unique([workspaceId, domain])
+}
+
+enum DomainStatus {
+  PENDING
+  VERIFIED
+  FAILED
+  NEEDS_RECHECK
+}
+
+model DomainVerification {
+  id            String   @id @default(cuid())
+  domainId      String
+  recordType    String   // "SPF" | "DKIM" | "DMARC" | "MX" | "RETURN_PATH" | "TRACKING"
+  name          String
+  value         String
+  status        String   // "PASS" | "FAIL" | "WARN"
+  checkedAt     DateTime @default(now())
+
+  domain        Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Contacts & consent ----------
+
+model Contact {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  email           String
+  firstName       String?
+  lastName        String?
+  locale          String?
+  timezone        String?
+  consentStatus   ConsentStatus @default(PENDING)
+  consentSource   String?
+  consentAt       DateTime?
+  consentIp       String?
+  consentUa       String?
+  tagsJson        String   @default("[]")  // JSON array of tags (SQLite-friendly)
+  importBatchId   String?
+  lastActivityAt  DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  consentRecords  ConsentRecord[]
+  segmentMembers  SegmentMember[]
+  campaignRecipients CampaignRecipient[]
+  emailSends      EmailSend[]
+
+  @@unique([workspaceId, email])
+  @@index([workspaceId, consentStatus])
+}
+
+enum ConsentStatus {
+  PENDING
+  VERIFIED
+  IMPORTED_WITH_PROOF
+  UNSUBSCRIBED
+  BOUNCED
+  COMPLAINED
+  SUPPRESSED
+}
+
+model ConsentRecord {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  contactId    String
+  event        String   // "OPT_IN" | "DOUBLE_OPT_IN_CONFIRMED" | "IMPORT_ATTESTED" | "UNSUBSCRIBE" | "PREFERENCE_UPDATE"
+  source       String?  // form, import, api, etc.
+  ip           String?
+  userAgent    String?
+  proofHash    String?  // tamper-evident hash for ledger
+  prevHash     String?
+  createdAt    DateTime @default(now())
+
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact      Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+model Segment {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  name          String
+  description   String?
+  filterJson    String   @default("{}")   // query definition
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  members       SegmentMember[]
+  campaigns     Campaign[]
+}
+
+model SegmentMember {
+  id          String  @id @default(cuid())
+  segmentId   String
+  contactId   String
+  addedAt     DateTime @default(now())
+
+  segment     Segment @relation(fields: [segmentId], references: [id], onDelete: Cascade)
+  contact     Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([segmentId, contactId])
+}
+
+model Suppression {
+  id          String   @id @default(cuid())
+  workspaceId String
+  email       String
+  reason      String   // "UNSUBSCRIBE" | "BOUNCE" | "COMPLAINT" | "MANUAL"
+  note        String?
+  createdAt   DateTime @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, email])
+}
+
+model Unsubscribe {
+  id          String   @id @default(cuid())
+  workspaceId String
+  email       String
+  campaignId  String?
+  source      String?
+  createdAt   DateTime @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Bounce {
+  id          String   @id @default(cuid())
+  workspaceId String
+  email       String
+  kind        String   // "HARD" | "SOFT"
+  code        String?
+  message     String?
+  campaignId  String?
+  createdAt   DateTime @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Complaint {
+  id          String   @id @default(cuid())
+  workspaceId String
+  email       String
+  campaignId  String?
+  source      String?
+  createdAt   DateTime @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Templates, campaigns, sends ----------
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  subject     String
+  preheader   String?
+  html        String
+  text        String
+  variablesJson String @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaigns   Campaign[]
+}
+
+model Campaign {
+  id                String        @id @default(cuid())
+  workspaceId       String
+  name              String
+  subject           String
+  preheader         String?
+  html              String
+  text              String
+  templateId        String?
+  segmentId         String?
+  sendingIdentityId String?
+  status            CampaignStatus @default(DRAFT)
+  scheduledAt       DateTime?
+  sentAt            DateTime?
+  approvedBy        String?
+  approvedAt        DateTime?
+  complianceJson    String         @default("{}")  // checklist snapshot at approval
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  workspace         Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  template          EmailTemplate? @relation(fields: [templateId], references: [id])
+  segment           Segment?      @relation(fields: [segmentId], references: [id])
+  sendingIdentity   SendingIdentity? @relation(fields: [sendingIdentityId], references: [id])
+  recipients        CampaignRecipient[]
+  sendJobs          SendJob[]
+  emailSends        EmailSend[]
+}
+
+enum CampaignStatus {
+  DRAFT
+  REVIEW
+  SCHEDULED
+  SENDING
+  PAUSED
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+model CampaignRecipient {
+  id          String   @id @default(cuid())
+  campaignId  String
+  contactId   String
+  status      String   @default("PENDING") // PENDING | QUEUED | SENT | FAILED | BOUNCED | UNSUBSCRIBED | SUPPRESSED
+  reason      String?
+  addedAt     DateTime @default(now())
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  contact     Contact  @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, contactId])
+}
+
+// ---------- Sending job / batches / queue ----------
+
+model SendJob {
+  id               String        @id @default(cuid())
+  workspaceId      String
+  campaignId       String
+  sendingIdentityId String?
+  providerAccountId String?
+  status           SendJobStatus @default(PENDING)
+  pauseReason      String?
+  totalRecipients  Int           @default(0)
+  sent             Int           @default(0)
+  failed           Int           @default(0)
+  bounced          Int           @default(0)
+  unsubscribed     Int           @default(0)
+  complained       Int           @default(0)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  pausedAt         DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  workspace        Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign         Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  sendingIdentity  SendingIdentity? @relation(fields: [sendingIdentityId], references: [id])
+  providerAccount  ProviderAccount? @relation(fields: [providerAccountId], references: [id])
+  batches          SendingBatch[]
+}
+
+enum SendJobStatus {
+  PENDING
+  RUNNING
+  PAUSED_QUOTA
+  PAUSED_CIRCUIT_BREAKER
+  PAUSED_DNS
+  PAUSED_MANUAL
+  COMPLETED
+  FAILED
+  CANCELED
+}
+
+model SendingBatch {
+  id         String   @id @default(cuid())
+  sendJobId  String
+  size       Int
+  sendAfter  DateTime
+  startedAt  DateTime?
+  finishedAt DateTime?
+  sent       Int      @default(0)
+  failed     Int      @default(0)
+  recipientIdsJson String  // JSON array of CampaignRecipient ids
+
+  sendJob    SendJob  @relation(fields: [sendJobId], references: [id], onDelete: Cascade)
+
+  @@index([sendAfter])
+}
+
+model EmailSend {
+  id          String   @id @default(cuid())
+  workspaceId String
+  campaignId  String?
+  contactId   String?
+  messageId   String?      // provider message id
+  subject     String
+  toEmail     String
+  fromEmail   String
+  status      String       // "SENT" | "DELIVERED" | "BOUNCED" | "FAILED" | "DEFERRED"
+  providerKind String?
+  errorCode   String?
+  errorMessage String?
+  sentAt      DateTime     @default(now())
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  campaign    Campaign?    @relation(fields: [campaignId], references: [id])
+  contact     Contact?     @relation(fields: [contactId], references: [id])
+  events      EmailEvent[]
+}
+
+model EmailEvent {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  emailSendId  String?
+  type         String   // "sent" | "delivered" | "open" | "click" | "bounce" | "complaint" | "unsubscribe" | "deferred"
+  payloadJson  String?  // raw webhook payload
+  occurredAt   DateTime @default(now())
+
+  workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  emailSend    EmailSend? @relation(fields: [emailSendId], references: [id])
+
+  @@index([workspaceId, type])
+}
+
+// ---------- Warmup ----------
+
+model WarmupSchedule {
+  id                String   @id @default(cuid())
+  workspaceId       String
+  sendingIdentityId String
+  startedAt         DateTime @default(now())
+  day               Int      @default(1)
+  dailyCap          Int
+  status            WarmupStatus @default(IN_PROGRESS)
+  completedAt       DateTime?
+
+  workspace         Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sendingIdentity   SendingIdentity @relation(fields: [sendingIdentityId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Health ----------
+
+model DeliverabilityHealth {
+  id              String   @id @default(cuid())
+  workspaceId     String
+  domain          String?
+  providerKind    String?
+  measuredAt      DateTime @default(now())
+  bounceRate      Float?
+  complaintRate   Float?
+  openRate        Float?
+  clickRate       Float?
+  unsubRate       Float?
+  inboxPct        Float?   // Gmail/Yahoo/Outlook
+  rblListed       Boolean  @default(false)
+
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+// ---------- Research ----------
+
+model SourceResearchItem {
+  id              String   @id @default(cuid())
+  name            String   @unique
+  category        String   // "provider" | "oss_newsletter" | "mail_server" | "dns_tool" | "spam_tool" | "template_lib" | "free_domain"
+  description     String?
+  officialUrl     String?
+  freeLimit       String?
+  dailyLimit      Int?
+  monthlyLimit    Int?
+  supportsSmtp    Boolean  @default(false)
+  supportsApi     Boolean  @default(false)
+  supportsMarketing Boolean @default(false)
+  supportsTransactional Boolean @default(false)
+  supportsWebhooks Boolean @default(false)
+  supportsBulk    Boolean  @default(false)
+  selfHosted      Boolean  @default(false)
+  license         String?
+  status          String   @default("verified") // "verified" | "needs_review" | "trial_only" | "outdated" | "removed" | "experimental"
+  riskLevel       String?  // "low" | "medium" | "high"
+  notes           String?
+  lastCheckedAt   DateTime @default(now())
+}
+
+// ---------- Audit ----------
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  workspaceId String?
+  userId      String?
+  action      String
+  targetType  String?
+  targetId    String?
+  metaJson    String?
+  createdAt   DateTime @default(now())
+
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  user        User?      @relation(fields: [userId], references: [id])
+
+  @@index([workspaceId, createdAt])
+}

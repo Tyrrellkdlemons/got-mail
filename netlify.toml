@@ -1,0 +1,34 @@
+# Got Mail — Netlify config
+# Deploys this Next.js app automatically when main branch updates.
+
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NPM_FLAGS = "--legacy-peer-deps"
+
+# Next.js plugin: turns Next routes into Netlify Functions + edge handlers.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=()"
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+
+# API routes: do not cache
+[[headers]]
+  for = "/api/*"
+  [headers.values]
+    Cache-Control = "no-store, max-age=0"
+
+# Webhook signing endpoints
+[functions]
+  node_bundler = "esbuild"

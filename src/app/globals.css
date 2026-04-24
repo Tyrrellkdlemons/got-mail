@@ -1,0 +1,189 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================
+   Got Mail — Retro-modern base
+   AOL × Blue's Clues × modern SaaS
+   ================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&family=Inter:wght@400;500;600;700;800&display=swap");
+
+:root {
+  --bg: #001A32;
+  --bg-2: #003B6D;
+  --panel: rgba(255, 255, 255, 0.06);
+  --panel-border: rgba(255, 255, 255, 0.12);
+  --text: #F3F8FF;
+  --text-muted: rgba(243, 248, 255, 0.7);
+  --accent: #FFD500;
+  --clue: #00AEEF;
+  --paw: #E63946;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, rgba(0, 174, 239, 0.18), transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, rgba(255, 213, 0, 0.10), transparent 60%),
+    linear-gradient(135deg, #001A32 0%, #003B6D 60%, #0061B0 100%);
+  background-attachment: fixed;
+  min-height: 100vh;
+}
+
+/* CRT scanline overlay */
+.crt::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.12) 0px,
+    rgba(0, 0, 0, 0.12) 1px,
+    transparent 2px,
+    transparent 4px
+  );
+  z-index: 50;
+  mix-blend-mode: multiply;
+}
+
+/* ========= Components ========= */
+
+@layer components {
+  .panel {
+    @apply rounded-chunky border bg-white/5 backdrop-blur-md;
+    border-color: var(--panel-border);
+    box-shadow:
+      inset 1px 1px 0 0 rgba(255, 255, 255, 0.1),
+      0 10px 40px -10px rgba(0, 0, 0, 0.6);
+  }
+
+  .panel-retro {
+    @apply rounded-chunky border-2 p-4;
+    background: linear-gradient(180deg, #0061B0 0%, #003B6D 100%);
+    border-color: #FFD500;
+    box-shadow:
+      inset 2px 2px 0 0 rgba(255, 255, 255, 0.25),
+      inset -2px -2px 0 0 rgba(0, 0, 0, 0.35),
+      4px 4px 0 0 rgba(0, 0, 0, 0.4);
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-chunky px-5 py-2.5 font-semibold transition-transform active:scale-95;
+  }
+
+  .btn-primary {
+    @apply btn text-aol-900;
+    background: linear-gradient(180deg, #FFE15A 0%, #FFD500 60%, #E6BE00 100%);
+    box-shadow:
+      inset 1px 1px 0 rgba(255, 255, 255, 0.6),
+      inset -1px -1px 0 rgba(0, 0, 0, 0.25),
+      0 4px 0 rgba(0, 0, 0, 0.3),
+      0 0 24px rgba(255, 213, 0, 0.45);
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+  }
+
+  .btn-secondary {
+    @apply btn text-white;
+    background: linear-gradient(180deg, #34C6F4 0%, #00AEEF 60%, #0090C7 100%);
+    box-shadow:
+      inset 1px 1px 0 rgba(255, 255, 255, 0.4),
+      inset -1px -1px 0 rgba(0, 0, 0, 0.25),
+      0 4px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-ghost {
+    @apply btn border border-white/20 text-white hover:bg-white/10;
+  }
+
+  .tag {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold;
+    border-color: rgba(255, 255, 255, 0.25);
+  }
+
+  .tag-good { @apply tag text-health-good border-health-good/40 bg-health-good/10; }
+  .tag-warn { @apply tag text-health-warn border-health-warn/40 bg-health-warn/10; }
+  .tag-bad  { @apply tag text-health-bad  border-health-bad/40  bg-health-bad/10; }
+  .tag-clue { @apply tag text-clue-400 border-clue-500/40 bg-clue-500/10; }
+  .tag-env  { @apply tag text-envelope-500 border-envelope-500/50 bg-envelope-500/10; }
+
+  .input {
+    @apply w-full rounded-lg border bg-white/5 px-3 py-2 text-white placeholder:text-white/40 outline-none transition-colors focus:border-clue-500;
+    border-color: var(--panel-border);
+  }
+
+  .label {
+    @apply mb-1 block text-sm font-semibold text-white/80;
+  }
+
+  .divider {
+    @apply my-6 h-px w-full bg-white/10;
+  }
+
+  /* Retro nav pill */
+  .nav-pill {
+    @apply flex items-center gap-2 rounded-chunky px-3 py-2 font-semibold text-white/80 transition-colors;
+  }
+  .nav-pill:hover { @apply bg-white/10 text-white; }
+  .nav-pill-active {
+    @apply nav-pill text-aol-900;
+    background: linear-gradient(180deg, #FFE15A 0%, #FFD500 100%);
+  }
+
+  /* Envelope icon shell */
+  .envelope {
+    @apply relative inline-block rounded-envelope;
+    background: linear-gradient(180deg, #FFE15A 0%, #FFD500 50%, #E6BE00 100%);
+    box-shadow:
+      inset 1px 1px 0 rgba(255, 255, 255, 0.6),
+      inset -1px -1px 0 rgba(0, 0, 0, 0.25),
+      2px 2px 0 rgba(0, 0, 0, 0.4);
+  }
+
+  /* Marquee helper */
+  .marquee-track {
+    @apply flex w-max gap-12 whitespace-nowrap;
+    animation: marquee 28s linear infinite;
+  }
+
+  /* Dialup dots */
+  .dialup {
+    display: inline-block;
+    letter-spacing: 2px;
+    font-family: "VT323", monospace;
+  }
+  .dialup::after {
+    content: "....";
+    animation: dialupDots 1.2s steps(4, end) infinite;
+  }
+}
+
+/* Marquee */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes dialupDots {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #00AEEF, #0061B0);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.04); }
