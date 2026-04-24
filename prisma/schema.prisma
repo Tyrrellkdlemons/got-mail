@@ -12,9 +12,14 @@ generator client {
 datasource db {
   // Neon Postgres for prod (Netlify). If you want to dev locally with SQLite,
   // temporarily switch provider back to "sqlite" and set DATABASE_URL=file:./prisma/dev.db
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  //
+  // Using only DATABASE_URL (the pooled URL) so we stay under AWS Lambda's 4KB
+  // env-var limit. Add `directUrl = env("DIRECT_URL")` back if you ever run
+  // `prisma migrate` in production — we don't (migrations run locally, then
+  // `prisma generate` + `prisma db push` run at build time against the pooled
+  // URL, which Neon accepts fine for schema pushes).
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // ---------- Identity ----------
