@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Got Mail">
+  <defs>
+    <linearGradient id="g-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#003B6D"/>
+      <stop offset="1" stop-color="#001A32"/>
+    </linearGradient>
+    <linearGradient id="g-env" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE15A"/>
+      <stop offset="1" stop-color="#E6BE00"/>
+    </linearGradient>
+    <linearGradient id="g-flap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF59F"/>
+      <stop offset="1" stop-color="#FFD500"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Rounded-square AOL blue background with yellow rim -->
+  <rect x="0.5" y="0.5" width="31" height="31" rx="7" ry="7" fill="url(#g-bg)" stroke="#FFD500" stroke-width="1"/>
+
+  <!-- Envelope body -->
+  <rect x="6" y="11.5" width="20" height="13" rx="1" fill="url(#g-env)" stroke="#000" stroke-width="1.1"/>
+
+  <!-- Flap -->
+  <polygon points="6,11.5 26,11.5 16,19" fill="url(#g-flap)" stroke="#000" stroke-width="1.1"/>
+
+  <!-- Side folds (paper creases) -->
+  <line x1="6" y1="24.5" x2="14" y2="17.5" stroke="#000" stroke-width="0.8" stroke-linecap="round"/>
+  <line x1="26" y1="24.5" x2="18" y2="17.5" stroke="#000" stroke-width="0.8" stroke-linecap="round"/>
+
+  <!-- Classic AOL red flag (you've got mail) -->
+  <rect x="21.2" y="4.5" width="1.2" height="7.5" rx="0.3" fill="#111"/>
+  <polygon points="22.4,4.5 28,6 22.4,8" fill="#E63946" stroke="#111" stroke-width="0.6" stroke-linejoin="round"/>
+
+  <!-- Tiny Blue's Clues paw print in the corner for personality -->
+  <g fill="#00AEEF" opacity="0.9">
+    <circle cx="4" cy="4" r="0.9"/>
+    <circle cx="6" cy="3" r="0.9"/>
+    <circle cx="8" cy="3" r="0.9"/>
+    <circle cx="10" cy="4" r="0.9"/>
+    <ellipse cx="7" cy="5.7" rx="2.2" ry="1.8"/>
+  </g>
+</svg>
