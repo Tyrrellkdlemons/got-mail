@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
   let firstIteration = true;
   for (const r of body.recipients) {
     if (!firstIteration) {
-      await new Promise((res) => setTimeout(res, 3500));
+      await new Promise((res) => setTimeout(res, 6000));
     }
     firstIteration = false;
     const personalizedBody = personalize(body.body, r) + FOOTER.replace(/\{\{\s*unsubscribe_url\s*\}\}/g, `https://got-mail.netlify.app/unsubscribe/test-${encodeURIComponent(r.email)}`);
