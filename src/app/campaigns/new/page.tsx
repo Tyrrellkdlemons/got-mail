@@ -97,7 +97,7 @@ export default function NewCampaignPage() {
 
       {created && (
         <div className="mb-6">
-          <Warning title={`Campaign "${created.name}" saved as DRAFT`} tone="good">
+          <Warning title={`Campaign "${created.name}" saved as DRAFT`} tone="info">
             You can{" "}
             <a className="underline" href="/campaigns">view all campaigns</a>{" "}or{" "}
             <a className="underline" href="/test-send">send a 5-recipient test batch</a>{" "}first.
