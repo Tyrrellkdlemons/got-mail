@@ -10,6 +10,7 @@ import {
   Users2, Mail, ShieldCheck, AlertTriangle, Zap, Database, KeyRound, RefreshCcw, FlaskConical, Flame,
 } from "lucide-react";
 import { AdminActions } from "./admin-actions-client";
+import { SignOutButton } from "./sign-out-button";
 
 export const dynamic = "force-dynamic";
 
@@ -61,18 +62,7 @@ export default async function AdminPanel() {
         actions={
           <>
             <Link href="/dashboard" className="btn-secondary">← Back to public site</Link>
-            <form action="/api/admin/auth" method="POST">
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={async () => {
-                  await fetch("/api/admin/auth", { method: "DELETE" });
-                  window.location.href = "/";
-                }}
-              >
-                Sign out
-              </button>
-            </form>
+            <SignOutButton />
           </>
         }
       />
