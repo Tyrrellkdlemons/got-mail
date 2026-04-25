@@ -10,7 +10,8 @@ import nodemailer from "nodemailer";
  * separately from message rate. Without caching every sendEmail() call opens a new connection
  * and trips per-second connection limits.
  */
-const transportCache = new Map<string, ReturnType<typeof nodemailer.createTransport>>();
+// Use a permissive map type — nodemailer's pool vs single Transporter generics differ.
+const transportCache = new Map<string, nodemailer.Transporter<any>>();
 
 export const smtp: ProviderModule = {
   kind: "smtp",
