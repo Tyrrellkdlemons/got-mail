@@ -1,0 +1,122 @@
+// =====================================================================
+//  schema.extension.prisma
+//
+//  Additions to merge into your existing prisma/schema.prisma.
+//  Copy these blocks (and the enum additions) into the main schema,
+//  then run:    npx prisma format && npx prisma migrate dev -n "extended"
+// =====================================================================
+
+// 1. Extend the Provider enum (replace with the union from your existing schema)
+//    -- Add these values if missing:
+//       RESEND
+//       SENDGRID
+//       MAILERSEND
+//       MAILJET
+//       SMTP2GO
+//       ELASTICEMAIL
+//       POSTMARK
+//       MAILTRAP
+//       ZEPTOMAIL
+//       AMAZONSES
+//       MAILCHANNELS
+//       POSTAL
+//       GENERIC_SMTP
+
+// 2. Extend ProviderAccount with priority + cooldown + disable.
+//    Add these fields to your existing model:
+//
+//    model ProviderAccount {
+//      ...existing fields...
+//      priority      Int       @default(100)
+//      cooledUntil   DateTime?
+//      disabled      Boolean   @default(false)
+//      usageDaily    UsageDaily[]
+//      usageMonth    UsageMonth[]
+//    }
+
+// 3. Daily and monthly usage tracking (used by routing.pickProvider)
+
+model UsageDaily {
+  id                 String   @id @default(cuid())
+  providerAccountId  String
+  providerAccount    ProviderAccount @relation(fields: [providerAccountId], references: [id], onDelete: Cascade)
+  date               String                 // YYYY-MM-DD
+  sent               Int      @default(0)
+  bounced            Int      @default(0)
+  complained         Int      @default(0)
+
+  @@unique([providerAccountId, date])
+  @@index([date])
+}
+
+model UsageMonth {
+  id                 String   @id @default(cuid())
+  providerAccountId  String
+  providerAccount    ProviderAccount @relation(fields: [providerAccountId], references: [id], onDelete: Cascade)
+  yearMonth          String                 // YYYY-MM
+  sent               Int      @default(0)
+
+  @@unique([providerAccountId, yearMonth])
+}
+
+// 4. Per-user suppression list (bounces, complaints, unsubscribes)
+
+enum SuppressionReason {
+  BOUNCE_HARD
+  BOUNCE_SOFT_THRESHOLD
+  COMPLAINT
+  UNSUBSCRIBE
+  MANUAL
+}
+
+model Suppression {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email              String                 // lowercased
+  reason             SuppressionReason
+  note               String?
+  providerMessageId  String?
+  createdAt          DateTime @default(now())
+
+  @@unique([userId, email])
+  @@index([userId])
+  @@index([email])
+}
+
+// 5. Sender domain + warming state
+
+model SenderDomain {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domain             String
+  verified           Boolean  @default(false)
+  warmingStartedAt   DateTime?
+  manualDailyCap     Int?
+  createdAt          DateTime @default(now())
+
+  @@unique([userId, domain])
+  @@index([userId])
+}
+
+// 6. Send log so webhooks can correlate provider message ids back to user/account
+
+model Send {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  providerAccountId   String
+  providerAccount     ProviderAccount @relation(fields: [providerAccountId], references: [id], onDelete: Cascade)
+  campaignId          String?
+  recipient           String
+  providerMessageId   String?
+  status              String   @default("queued")  // queued / sent / delivered / bounced / complained
+  errorReason         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
+  @@index([providerMessageId])
+  @@index([campaignId])
+}

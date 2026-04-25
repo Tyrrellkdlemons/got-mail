@@ -97,6 +97,12 @@ export const PROVIDER_KINDS = [
   "postal",
   "listmonk",
   "mautic",
+  // added 2026-04-24: extended free-tier providers
+  "mailersend",
+  "smtp2go",
+  "elasticemail",
+  "mailtrap",
+  "zeptomail",
 ] as const;
 
 export type ProviderKind = (typeof PROVIDER_KINDS)[number];

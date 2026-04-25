@@ -8,6 +8,11 @@ import { smtp } from "./smtp";
 import { postal } from "./postal";
 import { listmonk } from "./listmonk";
 import { mautic } from "./mautic";
+import { mailersend } from "./mailersend";
+import { smtp2go } from "./smtp2go";
+import { elasticemail } from "./elasticemail";
+import { mailtrap } from "./mailtrap";
+import { zeptomail } from "./zeptomail";
 
 // smtp handles gmail, google-workspace, zoho, outlook and generic SMTP.
 // ses is a TODO (AWS SDK).
@@ -23,6 +28,12 @@ export const providers: Record<string, ProviderModule> = {
   postal,
   listmonk,
   mautic,
+  // ----- new in this drop -----
+  mailersend,
+  smtp2go,
+  elasticemail,
+  mailtrap,
+  zeptomail,
 };
 
 export function getProvider(kind: string): ProviderModule {

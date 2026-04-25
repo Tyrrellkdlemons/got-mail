@@ -96,14 +96,25 @@ export default function ProviderSetupPage() {
             <div>
               <label className="label">Provider</label>
               <select className="input" value={providerKind} onChange={(e) => setProviderKind(e.target.value)}>
-                <option value="brevo">Brevo</option>
-                <option value="mailjet">Mailjet</option>
-                <option value="resend">Resend</option>
-                <option value="postmark">Postmark</option>
-                <option value="sendgrid">SendGrid</option>
-                <option value="postal">Postal (self-hosted)</option>
-                <option value="listmonk">listmonk (self-hosted)</option>
-                <option value="mautic">Mautic (self-hosted)</option>
+                <optgroup label="Free tier (best to start)">
+                  <option value="resend">Resend (3,000/mo)</option>
+                  <option value="brevo">Brevo (9,000/mo)</option>
+                  <option value="mailjet">Mailjet (6,000/mo)</option>
+                  <option value="mailersend">MailerSend (3,000/mo)</option>
+                  <option value="sendgrid">SendGrid (3,000/mo)</option>
+                  <option value="smtp2go">SMTP2GO (1,000/mo)</option>
+                  <option value="mailtrap">Mailtrap (1,000/mo)</option>
+                  <option value="elasticemail">Elastic Email (100/day)</option>
+                </optgroup>
+                <optgroup label="Pay-as-you-go">
+                  <option value="postmark">Postmark</option>
+                  <option value="zeptomail">Zoho ZeptoMail ($2.50 / 10K)</option>
+                </optgroup>
+                <optgroup label="Self-hosted">
+                  <option value="postal">Postal</option>
+                  <option value="listmonk">listmonk</option>
+                  <option value="mautic">Mautic</option>
+                </optgroup>
               </select>
             </div>
             <div>
