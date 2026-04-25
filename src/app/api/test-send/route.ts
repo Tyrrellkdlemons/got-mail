@@ -10,6 +10,7 @@ export const maxDuration = 60;
 const schema = z.object({
   provider: z.enum([
     "brevo",
+    "gmail",
     "mailjet",
     "resend",
     "postmark",
@@ -20,6 +21,9 @@ const schema = z.object({
     "mailtrap",
     "zeptomail",
     "smtp",
+    "postal",
+    "listmonk",
+    "mautic",
   ]),
   apiKey: z.string().optional(),
   apiSecret: z.string().optional(),
@@ -44,6 +48,7 @@ function resolveServerKeys(provider: string): { apiKey?: string; apiSecret?: str
   const env = process.env;
   switch (provider) {
     case "brevo":         return { apiKey: env.BREVO_API_KEY };
+    case "gmail":         return { apiKey: env.GMAIL_APP_PASSWORD, apiSecret: env.GMAIL_USER };
     case "mailjet":       return { apiKey: env.MAILJET_API_KEY, apiSecret: env.MAILJET_API_SECRET };
     case "resend":        return { apiKey: env.RESEND_API_KEY };
     case "postmark":      return { apiKey: env.POSTMARK_SERVER_TOKEN };
@@ -54,6 +59,9 @@ function resolveServerKeys(provider: string): { apiKey?: string; apiSecret?: str
     case "mailtrap":      return { apiKey: env.MAILTRAP_API_TOKEN };
     case "zeptomail":     return { apiKey: env.ZEPTOMAIL_API_KEY };
     case "smtp":          return { apiKey: env.SMTP_PASS, apiSecret: env.SMTP_USER };
+    case "postal":        return { apiKey: env.POSTAL_API_KEY };
+    case "listmonk":      return { apiKey: env.LISTMONK_PASSWORD, apiSecret: env.LISTMONK_USERNAME };
+    case "mautic":        return { apiKey: env.MAUTIC_PASSWORD, apiSecret: env.MAUTIC_USERNAME };
     default:              return {};
   }
 }
@@ -116,20 +124,36 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // For SMTP, the provider module reads config.smtp.{host,port,user,pass,useTls}.
+  // For SMTP-family providers, the provider module reads config.smtp.{host,port,user,pass,useTls}.
+  // Gmail uses smtp.gmail.com:587 with TLS and the user's app password.
+  let smtpConfig: any = undefined;
+  if (body.provider === "smtp") {
+    smtpConfig = {
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587,
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+      useTls: true,
+    };
+  } else if (body.provider === "gmail") {
+    smtpConfig = {
+      host: "smtp.gmail.com",
+      port: 587,
+      user: apiSecret || process.env.GMAIL_USER, // smtp user = gmail address
+      pass: apiKey || process.env.GMAIL_APP_PASSWORD,
+      useTls: true,
+    };
+  }
+
   const config: any = {
     apiKey,
     apiSecret,
-    smtp:
-      body.provider === "smtp"
-        ? {
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587,
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-            useTls: true,
-          }
-        : undefined,
+    smtp: smtpConfig,
+    baseUrl:
+      body.provider === "postal" ? process.env.POSTAL_BASE_URL :
+      body.provider === "listmonk" ? process.env.LISTMONK_BASE_URL :
+      body.provider === "mautic" ? process.env.MAUTIC_BASE_URL :
+      undefined,
   };
 
   // Validate the key first so we fail fast with a clean error

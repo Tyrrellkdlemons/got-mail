@@ -14,26 +14,35 @@ type SendResult = {
   errorMessage?: string;
 };
 
-const PROVIDER_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: "brevo",        label: "Brevo — 300/day free" },
-  { value: "resend",       label: "Resend — 100/day, 3k/month free" },
-  { value: "mailjet",      label: "Mailjet — 200/day, 6k/month free" },
-  { value: "postmark",     label: "Postmark — 100/month dev plan" },
-  { value: "sendgrid",     label: "SendGrid — 60-day trial @ 100/day" },
-  { value: "mailersend",   label: "MailerSend — 3,000/month free" },
-  { value: "smtp2go",      label: "SMTP2GO — 1,000/month free" },
-  { value: "elasticemail", label: "Elastic Email — 100/day free" },
-  { value: "mailtrap",     label: "Mailtrap — Email Sending API" },
-  { value: "zeptomail",    label: "Zoho ZeptoMail — 10k free trial" },
-  { value: "smtp",         label: "SMTP fallback (Mailtrap sandbox / custom)" },
+type ProviderOption = { value: string; label: string; group?: string };
+const PROVIDER_OPTIONS: ProviderOption[] = [
+  // Recommended for real-inbox tests right now
+  { value: "gmail",        label: "Gmail SMTP — direct to any inbox via your gmail (500/day)", group: "Recommended" },
+  // Hosted providers
+  { value: "resend",       label: "Resend — 100/day, 3k/month free", group: "Hosted" },
+  { value: "mailjet",      label: "Mailjet — 200/day, 6k/month free", group: "Hosted" },
+  { value: "postmark",     label: "Postmark — 100/month dev plan", group: "Hosted" },
+  { value: "sendgrid",     label: "SendGrid — 60-day trial @ 100/day", group: "Hosted" },
+  { value: "mailersend",   label: "MailerSend — 3,000/month free", group: "Hosted" },
+  { value: "smtp2go",      label: "SMTP2GO — 1,000/month free", group: "Hosted" },
+  { value: "elasticemail", label: "Elastic Email — 100/day free", group: "Hosted" },
+  { value: "mailtrap",     label: "Mailtrap — Email Sending API", group: "Hosted" },
+  { value: "zeptomail",    label: "Zoho ZeptoMail — 10k free trial", group: "Hosted" },
+  { value: "brevo",        label: "Brevo — 300/day free", group: "Hosted" },
+  // Sandbox / dev
+  { value: "smtp",         label: "SMTP fallback (Mailtrap sandbox / custom)", group: "Sandbox" },
+  // Self-hosted open source — fully unbound, no per-provider limits
+  { value: "postal",       label: "Postal — self-hosted (MIT)", group: "Self-hosted OSS" },
+  { value: "listmonk",     label: "listmonk — self-hosted (AGPL-3.0)", group: "Self-hosted OSS" },
+  { value: "mautic",       label: "Mautic — self-hosted (GPL)", group: "Self-hosted OSS" },
 ];
 
 export default function TestSendPage() {
-  const [provider, setProvider] = useState("brevo");
+  const [provider, setProvider] = useState("gmail");
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
   const [useServerKeys, setUseServerKeys] = useState(false);
-  const [available, setAvailable] = useState<Record<string, { available: boolean; from: string }>>({});
+  const [available, setAvailable] = useState<Record<string, { available: boolean; from: string; status?: string; note?: string }>>({});
   const [fromEmail, setFromEmail] = useState("");
   const [fromName, setFromName] = useState("Got Mail Test");
 
@@ -129,14 +138,68 @@ export default function TestSendPage() {
                   if (!available[e.target.value]?.available) setUseServerKeys(false);
                 }}
               >
-                {PROVIDER_OPTIONS.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label}
-                    {available[p.value]?.available ? " · ✓ key on server" : ""}
-                  </option>
-                ))}
+                {["Recommended", "Hosted", "Sandbox", "Self-hosted OSS"].map((groupName) => {
+                  const groupOpts = PROVIDER_OPTIONS.filter((p) => p.group === groupName);
+                  if (groupOpts.length === 0) return null;
+                  return (
+                    <optgroup key={groupName} label={groupName}>
+                      {groupOpts.map((p) => {
+                        const a = available[p.value];
+                        const suffix = a?.status === "suspended"
+                          ? " · ⛔ DOWN"
+                          : a?.status === "sandbox"
+                          ? " · ⚠ sandbox only"
+                          : a?.status === "self-hosted-needed" && !a.available
+                          ? " · needs URL+key"
+                          : a?.available
+                          ? " · ✓ key on server"
+                          : "";
+                        return (
+                          <option key={p.value} value={p.value}>
+                            {p.label}
+                            {suffix}
+                          </option>
+                        );
+                      })}
+                    </optgroup>
+                  );
+                })}
               </select>
             </div>
+
+            {/* Provider status banner — surface suspended/sandbox state inline */}
+            {available[provider]?.status === "suspended" && (
+              <div className="rounded-lg border border-health-bad/40 bg-health-bad/10 p-3 text-sm">
+                <div className="font-semibold text-health-bad">⛔ Provider currently DOWN</div>
+                <div className="mt-1 text-xs text-white/70">{available[provider]?.note}</div>
+              </div>
+            )}
+            {available[provider]?.status === "sandbox" && (
+              <div className="rounded-lg border border-health-warn/40 bg-health-warn/10 p-3 text-sm">
+                <div className="font-semibold text-health-warn">⚠ Sandbox provider</div>
+                <div className="mt-1 text-xs text-white/70">{available[provider]?.note}</div>
+              </div>
+            )}
+            {available[provider]?.status === "self-hosted-needed" && !available[provider]?.available && (
+              <div className="rounded-lg border border-clue-500/40 bg-clue-500/10 p-3 text-sm">
+                <div className="font-semibold text-clue-400">🛠 Self-hosted — needs configuration</div>
+                <div className="mt-1 text-xs text-white/70">{available[provider]?.note}</div>
+                <div className="mt-1 text-xs text-white/50">
+                  Set the env var(s) shown above in your `.env` and Netlify project, then redeploy.
+                </div>
+              </div>
+            )}
+            {provider === "gmail" && !available.gmail?.available && (
+              <div className="rounded-lg border border-clue-500/40 bg-clue-500/10 p-3 text-sm">
+                <div className="font-semibold text-clue-400">🔑 Gmail SMTP setup (one-time, ~2 min)</div>
+                <ol className="mt-2 space-y-1 text-xs text-white/70 list-decimal list-inside">
+                  <li>Open <a className="underline" href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer">myaccount.google.com/apppasswords</a> (requires 2FA on your Google account).</li>
+                  <li>Click "Create" → name it "Got Mail" → Google shows a 16-char password.</li>
+                  <li>Set Netlify env vars: <code className="font-mono">GMAIL_USER</code> = your gmail, <code className="font-mono">GMAIL_APP_PASSWORD</code> = the 16-char password.</li>
+                  <li>Trigger a redeploy. Gmail SMTP will then deliver to ANY inbox at 500/day.</li>
+                </ol>
+              </div>
+            )}
 
             {currentAvailable && (
               <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-clue-500/40 bg-clue-500/10 p-3 text-sm">
@@ -259,7 +322,12 @@ export default function TestSendPage() {
           <button
             type="submit"
             className="btn-primary"
-            disabled={loading || (!useServerKeys && !apiKey) || !fromEmail}
+            disabled={
+              loading ||
+              (!useServerKeys && !apiKey) ||
+              !fromEmail ||
+              available[provider]?.status === "suspended"
+            }
           >
             <Rocket className="h-4 w-4" />
             {loading ? "Sending…" : "Send test batch"}
