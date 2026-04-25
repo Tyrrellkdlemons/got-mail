@@ -116,20 +116,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // For SMTP, we need the host/port from env too.
-  const smtpExtras = body.provider === "smtp"
-    ? {
-        host: process.env.SMTP_HOST,
-        port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587,
-        username: process.env.SMTP_USER,
-        useTls: true,
-      }
-    : {};
-
+  // For SMTP, the provider module reads config.smtp.{host,port,user,pass,useTls}.
   const config: any = {
     apiKey,
     apiSecret,
-    ...smtpExtras,
+    smtp:
+      body.provider === "smtp"
+        ? {
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587,
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+            useTls: true,
+          }
+        : undefined,
   };
 
   // Validate the key first so we fail fast with a clean error
