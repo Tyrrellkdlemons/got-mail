@@ -29,8 +29,8 @@ export default async function AdminPanel() {
       prisma.domain.count().catch(() => 0),
       prisma.suppression.count().catch(() => 0),
       prisma.sourceResearchItem.count().catch(() => 0),
-      prisma.emailSend.findMany({ orderBy: { createdAt: "desc" }, take: 5 }).catch(() => []),
-      prisma.emailEvent.findMany({ orderBy: { createdAt: "desc" }, take: 5 }).catch(() => []),
+      prisma.emailSend.findMany({ orderBy: { sentAt: "desc" }, take: 5 }).catch(() => []),
+      prisma.emailEvent.findMany({ orderBy: { occurredAt: "desc" }, take: 5 }).catch(() => []),
     ]);
 
   const env = process.env;
@@ -139,11 +139,11 @@ export default async function AdminPanel() {
               <tbody className="divide-y divide-white/5">
                 {recentSends.map((s: any) => (
                   <tr key={s.id} className="hover:bg-white/5">
-                    <td className="px-4 py-3 font-mono text-xs text-white/60">{new Date(s.createdAt).toISOString().replace("T", " ").slice(0, 19)}</td>
-                    <td className="px-4 py-3 font-mono">{s.to}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-white/60">{new Date(s.sentAt).toISOString().replace("T", " ").slice(0, 19)}</td>
+                    <td className="px-4 py-3 font-mono">{s.toEmail}</td>
                     <td className="px-4 py-3">{s.status}</td>
                     <td className="px-4 py-3 text-xs text-white/70">{s.providerKind ?? "—"}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-white/60 break-all">{s.providerMessageId ?? "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-white/60 break-all">{s.messageId ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
