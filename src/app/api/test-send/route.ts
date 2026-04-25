@@ -8,9 +8,22 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const schema = z.object({
-  provider: z.enum(["brevo", "mailjet", "resend", "postmark", "sendgrid"]),
-  apiKey: z.string().min(5),
+  provider: z.enum([
+    "brevo",
+    "mailjet",
+    "resend",
+    "postmark",
+    "sendgrid",
+    "mailersend",
+    "smtp2go",
+    "elasticemail",
+    "mailtrap",
+    "zeptomail",
+    "smtp",
+  ]),
+  apiKey: z.string().optional(),
   apiSecret: z.string().optional(),
+  useServerKeys: z.boolean().optional(),
   fromEmail: z.string().email(),
   fromName: z.string().optional(),
   subject: z.string().min(1).max(200),
@@ -25,6 +38,25 @@ const schema = z.object({
     .min(1)
     .max(5),
 });
+
+/** Resolve provider credentials from server env vars when useServerKeys is true. */
+function resolveServerKeys(provider: string): { apiKey?: string; apiSecret?: string } {
+  const env = process.env;
+  switch (provider) {
+    case "brevo":         return { apiKey: env.BREVO_API_KEY };
+    case "mailjet":       return { apiKey: env.MAILJET_API_KEY, apiSecret: env.MAILJET_API_SECRET };
+    case "resend":        return { apiKey: env.RESEND_API_KEY };
+    case "postmark":      return { apiKey: env.POSTMARK_SERVER_TOKEN };
+    case "sendgrid":      return { apiKey: env.SENDGRID_API_KEY };
+    case "mailersend":    return { apiKey: env.MAILERSEND_API_KEY };
+    case "smtp2go":       return { apiKey: env.SMTP2GO_API_KEY };
+    case "elasticemail":  return { apiKey: env.ELASTICEMAIL_API_KEY };
+    case "mailtrap":      return { apiKey: env.MAILTRAP_API_TOKEN };
+    case "zeptomail":     return { apiKey: env.ZEPTOMAIL_API_KEY };
+    case "smtp":          return { apiKey: env.SMTP_PASS, apiSecret: env.SMTP_USER };
+    default:              return {};
+  }
+}
 
 const FOOTER = `
 
@@ -68,9 +100,36 @@ export async function POST(req: NextRequest) {
   }
 
   const provider = getProvider(body.provider);
-  const config = {
-    apiKey: body.apiKey,
-    apiSecret: body.apiSecret,
+
+  // Resolve credentials: prefer user-supplied, fall back to server env if requested.
+  let apiKey = body.apiKey;
+  let apiSecret = body.apiSecret;
+  if (body.useServerKeys || !apiKey) {
+    const fromEnv = resolveServerKeys(body.provider);
+    apiKey = apiKey || fromEnv.apiKey;
+    apiSecret = apiSecret || fromEnv.apiSecret;
+  }
+  if (!apiKey) {
+    return NextResponse.json(
+      { ok: false, error: `No API key for provider "${body.provider}". Paste one or set the matching env var on the server.` },
+      { status: 400 }
+    );
+  }
+
+  // For SMTP, we need the host/port from env too.
+  const smtpExtras = body.provider === "smtp"
+    ? {
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : 587,
+        username: process.env.SMTP_USER,
+        useTls: true,
+      }
+    : {};
+
+  const config: any = {
+    apiKey,
+    apiSecret,
+    ...smtpExtras,
   };
 
   // Validate the key first so we fail fast with a clean error

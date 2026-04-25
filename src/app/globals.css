@@ -122,6 +122,20 @@ body {
   .input {
     @apply w-full rounded-lg border bg-white/5 px-3 py-2 text-white placeholder:text-white/40 outline-none transition-colors focus:border-clue-500;
     border-color: var(--panel-border);
+    color-scheme: dark;
+  }
+  /* Native <select> popup uses OS chrome; force readable colors so options aren't white-on-white. */
+  .input option,
+  select.input option {
+    background-color: #0b1f3a;
+    color: #ffffff;
+  }
+  select.input {
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path fill='%2393c5fd' d='M6 8L0 0h12z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    padding-right: 2rem;
   }
 
   .label {

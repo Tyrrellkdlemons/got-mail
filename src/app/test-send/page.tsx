@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Warning } from "@/components/ui/Warning";
 import { Section } from "@/components/ui/Section";
-import { Rocket, CheckCircle2, XCircle } from "lucide-react";
+import { Rocket, CheckCircle2, XCircle, KeyRound } from "lucide-react";
 
 type SendResult = {
   to: string;
@@ -14,12 +14,45 @@ type SendResult = {
   errorMessage?: string;
 };
 
+const PROVIDER_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: "brevo",        label: "Brevo — 300/day free" },
+  { value: "resend",       label: "Resend — 100/day, 3k/month free" },
+  { value: "mailjet",      label: "Mailjet — 200/day, 6k/month free" },
+  { value: "postmark",     label: "Postmark — 100/month dev plan" },
+  { value: "sendgrid",     label: "SendGrid — 60-day trial @ 100/day" },
+  { value: "mailersend",   label: "MailerSend — 3,000/month free" },
+  { value: "smtp2go",      label: "SMTP2GO — 1,000/month free" },
+  { value: "elasticemail", label: "Elastic Email — 100/day free" },
+  { value: "mailtrap",     label: "Mailtrap — Email Sending API" },
+  { value: "zeptomail",    label: "Zoho ZeptoMail — 10k free trial" },
+  { value: "smtp",         label: "SMTP fallback (Mailtrap sandbox / custom)" },
+];
+
 export default function TestSendPage() {
   const [provider, setProvider] = useState("brevo");
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
+  const [useServerKeys, setUseServerKeys] = useState(false);
+  const [available, setAvailable] = useState<Record<string, { available: boolean; from: string }>>({});
   const [fromEmail, setFromEmail] = useState("");
   const [fromName, setFromName] = useState("Got Mail Test");
+
+  // On mount, ask the server which providers already have env-var keys configured.
+  useEffect(() => {
+    fetch("/api/test-send/available-providers")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.ok) {
+          setAvailable(d.providers ?? {});
+          if (d.fromEmailDefault && !fromEmail) setFromEmail(d.fromEmailDefault);
+          if (d.fromNameDefault) setFromName(d.fromNameDefault);
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const currentAvailable = available[provider]?.available ?? false;
   const [subject, setSubject] = useState("Hi from Got Mail — quick test");
   const [body, setBody] = useState(
     "Hi {{first_name}},\n\nThis is a quick test from Got Mail to verify my setup works end-to-end.\n\nThanks,\n— Me"
@@ -42,8 +75,9 @@ export default function TestSendPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           provider,
-          apiKey,
-          apiSecret,
+          apiKey: useServerKeys ? "" : apiKey,
+          apiSecret: useServerKeys ? "" : apiSecret,
+          useServerKeys,
           fromEmail,
           fromName,
           subject,
@@ -89,31 +123,59 @@ export default function TestSendPage() {
               <select
                 className="input"
                 value={provider}
-                onChange={(e) => setProvider(e.target.value)}
+                onChange={(e) => {
+                  setProvider(e.target.value);
+                  // Reset useServerKeys if the new provider doesn't have one configured
+                  if (!available[e.target.value]?.available) setUseServerKeys(false);
+                }}
               >
-                <option value="brevo">Brevo — 300/day free</option>
-                <option value="resend">Resend — 100/day free</option>
-                <option value="mailjet">Mailjet — 6,000/month free</option>
-                <option value="postmark">Postmark — 100/month dev plan</option>
-                <option value="sendgrid">SendGrid — 60-day trial</option>
+                {PROVIDER_OPTIONS.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                    {available[p.value]?.available ? " · ✓ key on server" : ""}
+                  </option>
+                ))}
               </select>
             </div>
-            <div>
-              <label className="label">API key</label>
-              <input
-                type="password"
-                className="input font-mono"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                placeholder="xkeysib-... / re_... / etc."
-                required
-              />
-              <div className="mt-1 text-xs text-white/50">
-                Sent once to the server for this request. Not stored. Get a free key at
-                brevo.com or resend.com.
+
+            {currentAvailable && (
+              <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-clue-500/40 bg-clue-500/10 p-3 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={useServerKeys}
+                  onChange={(e) => setUseServerKeys(e.target.checked)}
+                />
+                <span>
+                  <span className="font-semibold text-clue-400">
+                    <KeyRound className="mr-1 inline h-3 w-3" />
+                    Use server-side env keys
+                  </span>
+                  <span className="block text-xs text-white/60">
+                    Skip pasting — use the {available[provider]?.from} env var already configured
+                    on this deployment. Recommended for quick tests.
+                  </span>
+                </span>
+              </label>
+            )}
+
+            {!useServerKeys && (
+              <div>
+                <label className="label">API key</label>
+                <input
+                  type="password"
+                  className="input font-mono"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder="xkeysib-... / re_... / etc."
+                  required={!useServerKeys}
+                />
+                <div className="mt-1 text-xs text-white/50">
+                  Sent once to the server for this request. Not stored.
+                </div>
               </div>
-            </div>
-            {provider === "mailjet" && (
+            )}
+            {!useServerKeys && provider === "mailjet" && (
               <div>
                 <label className="label">API secret (Mailjet only)</label>
                 <input
@@ -197,7 +259,7 @@ export default function TestSendPage() {
           <button
             type="submit"
             className="btn-primary"
-            disabled={loading || !apiKey || !fromEmail}
+            disabled={loading || (!useServerKeys && !apiKey) || !fromEmail}
           >
             <Rocket className="h-4 w-4" />
             {loading ? "Sending…" : "Send test batch"}

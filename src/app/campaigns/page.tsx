@@ -21,9 +21,14 @@ export default async function CampaignsPage() {
         title="Craft a compliant campaign."
         subtitle="Subject, preview, HTML, plain text, required footer, required unsubscribe. Spam-risk warnings before you send."
         actions={
-          <Link href="/test-send" className="btn-primary">
-            Send a test batch (5)
-          </Link>
+          <>
+            <Link href="/campaigns/new" className="btn-primary">
+              New campaign
+            </Link>
+            <Link href="/test-send" className="btn-secondary">
+              Send a test batch (5)
+            </Link>
+          </>
         }
       />
       <div className="overflow-hidden rounded-chunky border border-white/10 bg-white/5">
