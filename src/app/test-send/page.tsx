@@ -58,7 +58,7 @@ export default function TestSendPage() {
     "Hi {{first_name}},\n\nThis is a quick test from Got Mail to verify my setup works end-to-end.\n\nThanks,\n— Me"
   );
   const [recipients, setRecipients] = useState(
-    "Ada Lovelace <ada@example.com>\nGrace Hopper <grace@example.com>\nAlan Turing <alan@example.com>\nLinus Torvalds <linus@example.com>\nMargaret Hamilton <margaret@example.com>"
+    "emilywilliamsis@yahoo.com\nemilydwxoxo@gmail.com"
   );
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SendResult[] | null>(null);
@@ -277,6 +277,55 @@ export default function TestSendPage() {
 
       {results && (
         <Section title="Results" className="mt-6">
+          {/* Summary stats */}
+          <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <div className="panel p-4">
+              <div className="font-retro text-[10px] uppercase tracking-widest text-white/60">Sent</div>
+              <div className="mt-1 font-display text-2xl text-health-good">
+                {results.filter((r) => r.ok).length}
+                <span className="text-base text-white/40"> / {results.length}</span>
+              </div>
+            </div>
+            <div className="panel p-4">
+              <div className="font-retro text-[10px] uppercase tracking-widest text-white/60">Failed</div>
+              <div className="mt-1 font-display text-2xl text-health-bad">
+                {results.filter((r) => !r.ok).length}
+              </div>
+            </div>
+            <div className="panel p-4">
+              <div className="font-retro text-[10px] uppercase tracking-widest text-white/60">Provider</div>
+              <div className="mt-1 font-display text-base text-clue-400">
+                {provider}
+              </div>
+            </div>
+            <div className="panel p-4">
+              <div className="font-retro text-[10px] uppercase tracking-widest text-white/60">Mode</div>
+              <div className="mt-1 font-display text-base text-envelope-500">
+                {provider === "smtp" && fromEmail.includes("sandbox.mailtrap")
+                  ? "sandbox"
+                  : useServerKeys
+                  ? "live · server key"
+                  : "live · user key"}
+              </div>
+            </div>
+          </div>
+
+          {/* Sandbox warning — emails won't reach real inboxes */}
+          {provider === "smtp" && fromEmail.includes("sandbox.mailtrap") && (
+            <div className="mb-4">
+              <Warning title="Sandbox mode — emails do NOT reach real inboxes" tone="warn">
+                Mailtrap sandbox captures messages in your{" "}
+                <a className="underline" href="https://mailtrap.io/sandboxes/4575017/messages" target="_blank" rel="noreferrer">
+                  Mailtrap sandbox inbox
+                </a>{" "}
+                instead of delivering them. To send to a real Yahoo / Gmail / etc address you need
+                a live provider (Brevo, Resend, Mailtrap Email Sending live tier, etc) — switch the
+                provider above.
+              </Warning>
+            </div>
+          )}
+
+          {/* Detailed results table */}
           <div className="overflow-hidden rounded-chunky border border-white/10 bg-white/5">
             <table className="w-full text-sm">
               <thead className="bg-aol-900/60 font-retro text-[10px] uppercase tracking-widest text-envelope-500">
@@ -284,7 +333,7 @@ export default function TestSendPage() {
                   <th className="px-4 py-3 text-left">Recipient</th>
                   <th className="px-4 py-3 text-left">Status</th>
                   <th className="px-4 py-3 text-left">Provider message id</th>
-                  <th className="px-4 py-3 text-left">Error</th>
+                  <th className="px-4 py-3 text-left">Detail</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -302,21 +351,39 @@ export default function TestSendPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-white/60">
+                    <td className="px-4 py-3 font-mono text-xs text-white/60 break-all">
                       {r.providerMessageId ?? "—"}
                     </td>
-                    <td className="px-4 py-3 text-xs text-health-bad">
-                      {r.errorMessage ?? ""}
+                    <td className="px-4 py-3 text-xs">
+                      {r.errorMessage ? (
+                        <span className="text-health-bad">{r.errorMessage}</span>
+                      ) : r.ok ? (
+                        <span className="text-white/50">accepted by provider</span>
+                      ) : (
+                        <span className="text-white/40">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <div className="mt-3 text-xs text-white/60">
-            Check the recipient inboxes to confirm delivery. If anything landed in spam, open the{" "}
-            <a href="/domain-wizard" className="underline">Domain Wizard</a> and verify SPF/DKIM/DMARC
-            on your From-email's domain.
+
+          {/* Footer help */}
+          <div className="mt-3 text-xs text-white/60 space-y-1">
+            <div>
+              <strong className="text-white/80">Where to look:</strong>{" "}
+              {provider === "smtp" && fromEmail.includes("sandbox.mailtrap") ? (
+                <>Open your <a className="underline" href="https://mailtrap.io/sandboxes/4575017/messages" target="_blank" rel="noreferrer">Mailtrap sandbox inbox</a> — every send lands there, not in the recipient's real mailbox.</>
+              ) : (
+                <>The recipient's real inbox. If it's not there in 1–2 minutes, check the spam folder and verify SPF/DKIM/DMARC in <a href="/domain-wizard" className="underline">Domain Wizard</a>.</>
+              )}
+            </div>
+            <div>
+              <strong className="text-white/80">"Too many emails per second" errors:</strong>{" "}
+              this is the provider's rate limit, not your code. Mailtrap sandbox free tier is the strictest;
+              Brevo / Resend / Postmark allow much higher throughput.
+            </div>
           </div>
         </Section>
       )}

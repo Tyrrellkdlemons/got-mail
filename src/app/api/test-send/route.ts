@@ -149,16 +149,10 @@ export async function POST(req: NextRequest) {
     errorMessage?: string;
   }> = [];
 
-  // Throttle: Mailtrap sandbox free tier is 2 emails/sec but in practice we see rate-limit
-  // errors below ~3s/email. 3.5s is generous and keeps a 5-recipient batch under 18s
-  // (well within Netlify's 60s function maxDuration). Real providers like Brevo can
-  // tolerate faster rates; this is the safe default.
-  let firstIteration = true;
+  // No manual delay needed: SMTP provider uses a pooled transport with built-in
+  // rateLimit/rateDelta. API providers (Brevo etc) handle their own concurrency.
+  // Sequential awaits below ensure ordered results.
   for (const r of body.recipients) {
-    if (!firstIteration) {
-      await new Promise((res) => setTimeout(res, 6000));
-    }
-    firstIteration = false;
     const personalizedBody = personalize(body.body, r) + FOOTER.replace(/\{\{\s*unsubscribe_url\s*\}\}/g, `https://got-mail.netlify.app/unsubscribe/test-${encodeURIComponent(r.email)}`);
     const msg: EmailMessage = {
       to: r.email,
