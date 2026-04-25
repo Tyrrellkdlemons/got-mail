@@ -149,10 +149,15 @@ export async function POST(req: NextRequest) {
     errorMessage?: string;
   }> = [];
 
-  // No manual delay needed: SMTP provider uses a pooled transport with built-in
-  // rateLimit/rateDelta. API providers (Brevo etc) handle their own concurrency.
-  // Sequential awaits below ensure ordered results.
+  // Throttle: Mailtrap free tier enforces a wide rolling rate window.
+  // 8s gap is comfortable for sandbox; for real providers this is overkill but harmless.
+  // 5 recipients * 8s = 40s, within Netlify's 60s function maxDuration.
+  let firstIteration = true;
   for (const r of body.recipients) {
+    if (!firstIteration) {
+      await new Promise((res) => setTimeout(res, 8000));
+    }
+    firstIteration = false;
     const personalizedBody = personalize(body.body, r) + FOOTER.replace(/\{\{\s*unsubscribe_url\s*\}\}/g, `https://got-mail.netlify.app/unsubscribe/test-${encodeURIComponent(r.email)}`);
     const msg: EmailMessage = {
       to: r.email,
