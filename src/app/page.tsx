@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Envelope } from "@/components/brand/Envelope";
 import { PawStripe } from "@/components/brand/PawStripe";
+import { HiddenBackdoors } from "@/components/admin/HiddenBackdoors";
 import {
   ShieldCheck,
   Globe2,
@@ -54,9 +55,12 @@ export default function Landing() {
     <div className="relative min-h-screen overflow-x-hidden">
       <PawStripe />
 
+      {/* Hidden admin backdoors — keystroke + click triggers; see BACKDOORS.md */}
+      <HiddenBackdoors />
+
       {/* Top bar */}
       <header className="relative z-20 mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-        <Link href="/" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3" data-backdoor="logo">
           <Envelope className="h-10 w-10 animate-envelope-bob" />
           <div>
             <div className="font-retro text-sm tracking-tight text-envelope-500">
