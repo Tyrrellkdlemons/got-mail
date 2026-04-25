@@ -7,17 +7,17 @@ import { useEffect, useRef, useState } from "react";
  *
  * Backdoor #1 — KONAMI CODE
  *   Type the Konami sequence (↑ ↑ ↓ ↓ ← → ← → b a) anywhere on the home page.
- *   Triggers a redirect to /__admin/login.
+ *   Triggers a redirect to /admin/login.
  *
  * Backdoor #2 — TYPE THE SECRET WORD
  *   Type the literal word "gotmail" (no shifts, no spaces) anywhere on the page
- *   within a 3-second window. Triggers redirect to /__admin/login.
+ *   within a 3-second window. Triggers redirect to /admin/login.
  *
  * Backdoor #3 — LOGO 7-CLICK
  *   Click any element with data-backdoor="logo" 7 times within 3 seconds.
  *
  * The token URL backdoor (#3 in BACKDOORS.md as well) doesn't need any JS —
- * just visit /__admin/login?backdoor=<token>. Handled by the login page.
+ * just visit /admin/login?backdoor=<token>. Handled by the login page.
  *
  * NOTE: All three backdoors only get you to the LOGIN screen. You still
  * have to know the ADMIN_TOKEN to actually log in. Keep that secret in env.
@@ -36,7 +36,7 @@ export function HiddenBackdoors() {
     function showFlash(label: string) {
       setFlash(label);
       setTimeout(() => {
-        window.location.href = "/__admin/login";
+        window.location.href = "/admin/login";
       }, 600);
     }
 

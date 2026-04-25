@@ -1,10 +1,10 @@
 # Got Mail — admin backdoors
 
-Three hidden ways to reach the admin login screen at `/__admin/login`. All three
+Three hidden ways to reach the admin login screen at `/admin/login`. All three
 are *gateways* — they only open the door. To actually log in you still need to
 enter the `ADMIN_TOKEN` (stored in your `.env` and Netlify env vars).
 
-The admin dashboard itself lives at `/__admin` and is gated by an HMAC-signed
+The admin dashboard itself lives at `/admin` and is gated by an HMAC-signed
 HttpOnly cookie that expires in 24 hours.
 
 ---
@@ -55,7 +55,7 @@ sniffers on, because clicks aren't unusual.
 You can paste the URL directly:
 
 ```
-https://got-mail.netlify.app/__admin/login?backdoor=<ADMIN_TOKEN>
+https://got-mail.netlify.app/admin/login?backdoor=<ADMIN_TOKEN>
 ```
 
 The `?backdoor=` query param **prefills** the password field but does NOT
@@ -84,7 +84,7 @@ Rotating `ADMIN_TOKEN` instantly invalidates every existing admin session
 
 ## What the admin panel can do
 
-Visit `/__admin` after auth and you get:
+Visit `/admin` after auth and you get:
 
 - **At-a-glance counts** — contacts, segments, campaigns, identities, domains,
   suppressions, source-catalog rows, recent sends.
@@ -109,8 +109,8 @@ is the expiry timestamp and whose signature is `HMAC-SHA256(timestamp,
 ADMIN_TOKEN)`. Forging a cookie requires knowing the token. Cookie max age is
 24h; expired cookies fail validation.
 
-The admin dashboard at `/__admin` checks the cookie on every server render and
-redirects to `/__admin/login` if it's missing or invalid. The action endpoint
-at `/api/__admin/action` re-checks the cookie before executing anything.
+The admin dashboard at `/admin` checks the cookie on every server render and
+redirects to `/admin/login` if it's missing or invalid. The action endpoint
+at `/api/admin/action` re-checks the cookie before executing anything.
 
 If you ever suspect leak: rotate `ADMIN_TOKEN`, redeploy, every session dies.
